@@ -4,11 +4,11 @@ import Navbar from "./Navbar";
 import { Outlet } from "react-router-dom";
 
 const Layout = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // mobile default: band
 
   return (
-    <div className="flex min-h-screen bg-slate-50 font-['Inter',sans-serif]">
-      {sidebarOpen && <Sidebar />}
+    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 font-['Inter',sans-serif]">
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex-1 flex flex-col min-w-0">
         <Navbar onToggleSidebar={() => setSidebarOpen((s) => !s)} />
