@@ -1,13 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  Trash2,
-  Eye,
-  Video,
-  BarChart3,
-  TrendingUp,
-  Clock,
-} from "lucide-react";
+import { Trash2, Eye, Video, BarChart3, TrendingUp, Clock, Download } from "lucide-react";
+import { generateComparisonPDF } from "../utils/generateReport";
 import axios from "axios";
 import { BASE_URL } from "../utils/constant";
 import { extractYouTubeId, parseAIResult, parseScore } from "./ComparisonResult";
@@ -36,7 +30,10 @@ const History = () => {
       setLoading(false);
     }
   };
-
+const downloadReport = (item) => {
+  const analysis = parseAIResult(item.aiResult);
+  generateComparisonPDF(item, analysis);
+};
   const deleteComparison = async (id) => {
     try {
       await axios.delete(`${BASE_URL}/history/${id}`, {
@@ -182,23 +179,31 @@ const History = () => {
                   <td className="py-4 px-6 text-slate-500 dark:text-slate-400 font-['JetBrains_Mono',monospace] text-xs">
                     {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "—"}
                   </td>
-                  <td className="py-4 px-6">
-                    <div className="flex items-center justify-end gap-2">
-                      <Link
-                        to={`/history/${item._id}`}
-                        className="flex items-center gap-1.5 text-teal-600 dark:text-teal-400 hover:text-teal-700 bg-teal-50 dark:bg-teal-900/30 hover:bg-teal-100 dark:hover:bg-teal-900/50 border border-teal-200 dark:border-teal-800 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                      >
-                        <Eye size={13} />
-                        View
-                      </Link>
-                      <button
-                        onClick={() => deleteComparison(item._id)}
-                        className="flex items-center justify-center h-8 w-8 rounded-lg text-slate-400 dark:text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </td>
+<td className="py-4 px-6">
+  <div className="flex items-center justify-end gap-2">
+    <Link
+      to={`/history/${item._id}`}
+      className="flex items-center gap-1.5 text-teal-600 dark:text-teal-400 hover:text-teal-700 bg-teal-50 dark:bg-teal-900/30 hover:bg-teal-100 dark:hover:bg-teal-900/50 border border-teal-200 dark:border-teal-800 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+    >
+      <Eye size={13} />
+      View
+    </Link>
+    <button
+      onClick={() => downloadReport(item)}
+      disabled={!parseAIResult(item.aiResult)}
+      title={!parseAIResult(item.aiResult) ? "Report not ready" : "Download report"}
+      className="flex items-center justify-center h-8 w-8 rounded-lg text-slate-400 dark:text-slate-500 hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-900/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+    >
+      <Download size={14} />
+    </button>
+    <button
+      onClick={() => deleteComparison(item._id)}
+      className="flex items-center justify-center h-8 w-8 rounded-lg text-slate-400 dark:text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
+    >
+      <Trash2 size={14} />
+    </button>
+  </div>
+</td>
                 </tr>
               ))}
             </tbody>

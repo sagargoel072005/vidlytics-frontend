@@ -1,14 +1,11 @@
 import {
-  TrendingUp,
-  Layers,
-  GitCompare,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
-  Play,
-  Sparkles,
+  TrendingUp, Layers, GitCompare, Clock,
+  CheckCircle2, AlertCircle, Play, Sparkles, Download,
 } from "lucide-react";
 import ChatTab from "./ChatTab";
+
+import { generateComparisonPDF } from "../utils/generateReport";
+
 
 export const parseAIResult = (raw) => {
   if (!raw) return null;
@@ -145,6 +142,15 @@ const ComparisonResult = ({ comparison, analysis, comparisonId }) => {
     <div className="font-['Inter',sans-serif]">
       {/* Header card */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-8 mb-6 shadow-[0_20px_60px_rgba(15,23,42,0.05)] dark:shadow-none">
+      <div className="flex items-center justify-end mb-4">
+    <button
+      onClick={() => generateComparisonPDF(comparison, analysis)}
+      className="flex items-center gap-1.5 text-sm font-medium text-teal-600 dark:text-teal-400 border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-900/30 hover:bg-teal-100 dark:hover:bg-teal-900/50 rounded-lg px-3 py-1.5 transition-colors"
+    >
+      <Download size={13} />
+      Download Report
+    </button>
+  </div>
         <div className="flex flex-wrap items-center gap-6">
           <div className="flex items-center gap-4 flex-1 min-w-0">
             <VideoPreview

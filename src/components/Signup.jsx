@@ -70,10 +70,10 @@ const Signup = () => {
       navigate("/dashboard");
     } catch (err) {
       console.log(err);
-        setError(
-      err?.response?.data?.message ||
-      "Something went wrong"
-    );
+      setError(
+        err?.response?.data?.message ||
+        "Something went wrong"
+      );
     }
   };
 
@@ -193,12 +193,32 @@ const Signup = () => {
               Create Account
             </button>
 
-              {error && (
+            {error && (
               <div
                 className="mt-3 p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm">
                 {error}
               </div>
             )}
+
+            <div className="flex items-center gap-3 py-1">
+              <div className="h-px flex-1 bg-slate-200" />
+              <span className="text-xs text-slate-400 font-medium">OR</span>
+              <div className="h-px flex-1 bg-slate-200" />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => (window.location.href = `${BASE_URL}/auth/google`)}
+              className="w-full flex items-center justify-center gap-3 bg-white border border-slate-200 text-slate-700 py-3.5 rounded-xl font-medium hover:bg-slate-50 hover:border-slate-300 transition-all"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M23.52 12.27c0-.79-.07-1.54-.2-2.27H12v4.51h6.47c-.28 1.48-1.13 2.73-2.4 3.58v2.98h3.86c2.26-2.08 3.59-5.15 3.59-8.8z" />
+                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.92l-3.86-2.98c-1.07.72-2.45 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.24v3.07C3.2 21.3 7.26 24 12 24z" />
+                <path fill="#FBBC05" d="M5.27 14.29A7.2 7.2 0 0 1 4.9 12c0-.8.14-1.57.37-2.29V6.64H1.24A11.9 11.9 0 0 0 0 12c0 1.93.46 3.75 1.24 5.36l4.03-3.07z" />
+                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.94 1.19 15.24 0 12 0 7.26 0 3.2 2.7 1.24 6.64l4.03 3.07C6.22 6.86 8.87 4.75 12 4.75z" />
+              </svg>
+              Continue with Google
+            </button>
 
 
             <p className="text-center text-slate-500 pt-2">

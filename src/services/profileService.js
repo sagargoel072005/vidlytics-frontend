@@ -12,3 +12,12 @@ export const editProfileAPI = (data) =>
 
 export const changePasswordAPI = (data) =>
   axios.patch(`${BASE_URL}/profile/password`, data, { withCredentials: true });
+
+export const uploadProfilePhotoAPI = async (file) => {
+  const formData = new FormData();
+  formData.append("photo", file);
+  return axios.post(BASE_URL + "/profile/upload-photo", formData, {
+    withCredentials: true,
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+};

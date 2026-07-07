@@ -1,20 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  BarChart3,
-  Video,
-  Star,
-  Lock,
-  Mail,
-  Calendar,
-  Eye,
-  EyeOff,
-  Pencil,
+  BarChart3, Video, Star, Lock, Mail, Calendar, Eye, EyeOff, Pencil, Camera,
 } from "lucide-react";
 import {
-  getProfileAPI,
-  getProfileStatsAPI,
-  editProfileAPI,
-  changePasswordAPI,
+  getProfileAPI, getProfileStatsAPI, editProfileAPI,
+  changePasswordAPI, uploadProfilePhotoAPI,
 } from "../services/profileService";
 
 const PasswordField = ({ label, value, onChange, placeholder }) => {
@@ -70,9 +60,11 @@ const parseSimilarityScore = (aiResult) => {
 const Profile = () => {
   const [profile, setProfile] = useState(null);
   const [stats, setStats] = useState(null);
-
+  const fileInputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+  const [photoError, setPhotoError] = useState("");
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ firstName: "", lastName: "" });
+  const [form, setForm] = useState({ firstName: "", lastName: "", gender: "", age: "" });
   const [editMsg, setEditMsg] = useState("");
 
   const [passwords, setPasswords] = useState({
@@ -90,7 +82,28 @@ const Profile = () => {
   const loadProfile = async () => {
     const res = await getProfileAPI();
     setProfile(res.data);
-    setForm({ firstName: res.data.firstName, lastName: res.data.lastName || "" });
+    setForm({
+      firstName: res.data.firstName,
+      lastName: res.data.lastName || "",
+      gender: res.data.gender || "",
+      age: res.data.age || "",
+    });
+  };
+
+  const handlePhotoChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoError("");
+    setUploading(true);
+    try {
+      const res = await uploadProfilePhotoAPI(file);
+      setProfile(res.data);
+    } catch (err) {
+      setPhotoError(err?.response?.data?.error || "Photo upload failed");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
   };
 
   const loadStats = async () => {
@@ -109,32 +122,42 @@ const Profile = () => {
     }
   };
 
- const handleUpdatePassword = async () => {
-  setPasswordMsg("");
-
-  if (passwords.newPassword !== passwords.confirmPassword) {
-    setPasswordMsg("New password and confirm password don't match");
-    return;
-  }
-
-  try {
-    await changePasswordAPI({
-      oldPassword: passwords.currentPassword, // <-- change here
-      newPassword: passwords.newPassword,
+  const cancelEdit = () => {
+    setEditing(false);
+    setForm({
+      firstName: profile.firstName,
+      lastName: profile.lastName || "",
+      gender: profile.gender || "",
+      age: profile.age || "",
     });
+  };
 
-    setPasswordMsg("Password updated successfully");
-    setPasswords({
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: "",
-    });
-  } catch (err) {
-    setPasswordMsg(
-      err?.response?.data || "Something went wrong"
-    );
-  }
-};
+  const handleUpdatePassword = async () => {
+    setPasswordMsg("");
+
+    if (passwords.newPassword !== passwords.confirmPassword) {
+      setPasswordMsg("New password and confirm password don't match");
+      return;
+    }
+
+    try {
+      await changePasswordAPI({
+        oldPassword: passwords.currentPassword,
+        newPassword: passwords.newPassword,
+      });
+
+      setPasswordMsg("Password updated successfully");
+      setPasswords({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+    } catch (err) {
+      setPasswordMsg(
+        err?.response?.data || "Something went wrong"
+      );
+    }
+  };
 
   if (!profile) {
     return (
@@ -204,28 +227,79 @@ const Profile = () => {
             )}
           </div>
 
-          <div className="flex items-center gap-4 mb-6">
-            <div className="h-16 w-16 rounded-full bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-400 flex items-center justify-center font-semibold text-2xl font-['Space_Grotesk',sans-serif]">
-              {profile.firstName?.charAt(0).toUpperCase()}
+          {/* Avatar + Name row */}
+          <div className="mb-6">
+            <div className="flex items-center gap-4">
+              <div className="relative shrink-0">
+                <div className="h-16 w-16 rounded-full bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-400 flex items-center justify-center font-semibold text-2xl font-['Space_Grotesk',sans-serif] overflow-hidden">
+                  {profile.photoUrl ? (
+                    <img src={profile.photoUrl} alt="Profile" className="h-full w-full object-cover" />
+                  ) : (
+                    profile.firstName?.charAt(0).toUpperCase()
+                  )}
+                  {uploading && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-full">
+                      <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-teal-600 border-2 border-white dark:border-slate-800 flex items-center justify-center hover:bg-teal-700 transition-colors"
+                >
+                  <Camera size={12} className="text-white" />
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoChange}
+                  className="hidden"
+                />
+              </div>
+
+              {!editing ? (
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 font-['Space_Grotesk',sans-serif]">
+                  {profile.firstName} {profile.lastName}
+                </h3>
+              ) : (
+                <div className="flex gap-2 flex-wrap">
+                  <input
+                    value={form.firstName}
+                    onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))}
+                    placeholder="First name"
+                    className="w-32 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500"
+                  />
+                  <input
+                    value={form.lastName}
+                    onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))}
+                    placeholder="Last name"
+                    className="w-32 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500"
+                  />
+                </div>
+              )}
             </div>
 
-            {!editing ? (
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 font-['Space_Grotesk',sans-serif]">
-                {profile.firstName} {profile.lastName}
-              </h3>
-            ) : (
-              <div className="flex gap-2">
-                <input
-                  value={form.firstName}
-                  onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))}
-                  placeholder="First name"
+            {/* Gender + Age — separate row so it never overflows/hides */}
+            {editing && (
+              <div className="flex gap-2 mt-3 ml-20 flex-wrap">
+                <select
+                  value={form.gender}
+                  onChange={(e) => setForm((f) => ({ ...f, gender: e.target.value }))}
                   className="w-32 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500"
-                />
+                >
+                  <option value="">Gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
                 <input
-                  value={form.lastName}
-                  onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))}
-                  placeholder="Last name"
-                  className="w-32 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500"
+                  type="number"
+                  value={form.age}
+                  onChange={(e) => setForm((f) => ({ ...f, age: e.target.value }))}
+                  placeholder="Age"
+                  className="w-24 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500"
                 />
               </div>
             )}
@@ -240,10 +314,7 @@ const Profile = () => {
                 Save
               </button>
               <button
-                onClick={() => {
-                  setEditing(false);
-                  setForm({ firstName: profile.firstName, lastName: profile.lastName || "" });
-                }}
+                onClick={cancelEdit}
                 className="text-sm font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg px-4 py-2 transition-colors"
               >
                 Cancel
@@ -252,6 +323,7 @@ const Profile = () => {
           )}
 
           {editMsg && <p className="text-sm text-rose-600 mb-4">{editMsg}</p>}
+          {photoError && <p className="text-sm text-rose-600 mb-4">{photoError}</p>}
 
           <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
             <div className="flex items-center gap-2.5">
@@ -269,6 +341,11 @@ const Profile = () => {
                   })
                 : "—"}
             </div>
+            {profile.gender && (
+              <div className="flex items-center gap-2.5 capitalize">
+                {profile.gender}{profile.age ? `, ${profile.age} yrs` : ""}
+              </div>
+            )}
           </div>
         </div>
 
