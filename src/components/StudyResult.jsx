@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { FileText, ListChecks, Workflow, BookMarked } from "lucide-react";
 import QuizTab from "./QuizTab";
-import FlowchartView from "./FlowchartView";
-
+import { lazy, Suspense } from "react";
+const FlowchartView = lazy(() => import("./FlowchartView"));
 // aiResult can come back as a real object or as a "```json {...}```" string —
 // same pattern as ComparisonResult.jsx, normalize both into a plain object.
 export const parseStudyResult = (raw) => {
@@ -102,17 +102,19 @@ const StudyResult = ({ study, analysis }) => {
 
       {tab === "quiz" && <QuizTab questions={analysis?.quiz || []} />}
 
-      {tab === "flowchart" && (
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6">
-          {analysis?.mermaidFlowchart ? (
-            <FlowchartView chart={analysis.mermaidFlowchart} />
-          ) : (
-            <p className="text-sm text-slate-400 text-center py-8">
-              No flowchart available for this video.
-            </p>
-          )}
-        </div>
-      )}
+    {tab === "flowchart" && (
+  <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6">
+    {analysis?.mermaidFlowchart ? (
+      <Suspense fallback={<div className="text-sm text-slate-400 text-center py-8">Loading flowchart...</div>}>
+        <FlowchartView chart={analysis.mermaidFlowchart} />
+      </Suspense>
+    ) : (
+      <p className="text-sm text-slate-400 text-center py-8">
+        No flowchart available for this video.
+      </p>
+    )}
+  </div>
+)}
 
       {tab === "terms" && (
         <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6">
