@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   History as HistoryIcon,
+  BookOpen,
   User,
   LogOut,
   X,
@@ -10,6 +11,7 @@ import { logoutAPI } from "../services/authService";
 
 const NAV_ITEMS = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/study", label: "Study Mode", icon: BookOpen },
   { to: "/history", label: "History", icon: HistoryIcon },
 ];
 

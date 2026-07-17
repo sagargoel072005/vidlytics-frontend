@@ -12,7 +12,8 @@ import History from "./components/History";
 import ComparisonDetails from "./components/ComparisonDetails";
 import Profile from "./components/Profile";
 import Layout from "./components/Layout";
-
+import NewStudy from "./components/NewStudy";
+import StudyDetails from "./components/StudyDetails";
 import "./index.css";
 
 function App() {
@@ -53,6 +54,13 @@ function App() {
               path="/history/:id"
               element={<ComparisonDetails />}
             />
+            <Route
+             path="/study"
+            element={<NewStudy />} />
+
+            <Route
+             path="/study/:id" 
+             element={<StudyDetails />} />
 
           </Route>
         </Route>

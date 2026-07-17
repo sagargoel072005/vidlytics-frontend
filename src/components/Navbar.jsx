@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu, Bell, Sun, Moon, ChevronDown } from "lucide-react";
+import { Menu, Bell, Sun, Moon, ChevronDown, BookOpen } from "lucide-react";
 import { useSelector } from "react-redux";
 import { logoutAPI } from "../services/authService";
 import { useDarkMode } from "../hooks/useDarkMode";
@@ -53,7 +53,7 @@ const Navbar = ({ onToggleSidebar }) => {
           {dark ? <Moon size={18} /> : <Sun size={18} />}
         </button>
 
-
+    
 
         {/* Account dropdown */}
         <div className="relative">
