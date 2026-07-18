@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { FileText, ListChecks, Workflow, BookMarked, Download } from "lucide-react";
+import { FileText, ListChecks, Workflow, BookMarked, Download, Loader2 } from "lucide-react";
+import mermaid from "mermaid";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 import QuizTab from "./QuizTab";
 import FlowchartView from "./FlowchartView";
 
@@ -56,7 +59,124 @@ const downloadStudyNotes = (study, analysis) => {
   URL.revokeObjectURL(url);
 };
 
-// aiResult can come back as a real object or as a "```json {...}```" string —
+// Renders notes + key terms + quiz + the mermaid flowchart into an
+// offscreen container, then captures it into a paginated PDF. Runs entirely
+// in the browser — no backend call, no server-side PDF rendering needed.
+const downloadStudyPDF = async (study, analysis) => {
+  const title = study?.videoTitle || "Study Notes";
+
+  const container = document.createElement("div");
+  container.style.position = "fixed";
+  container.style.left = "-9999px";
+  container.style.top = "0";
+  container.style.width = "760px";
+  container.style.padding = "32px";
+  container.style.background = "#ffffff";
+  container.style.color = "#0f172a";
+  container.style.fontFamily = "'Inter', Arial, sans-serif";
+
+  const esc = (s = "") =>
+    String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  let html = `<h1 style="font-size:22px;margin:0 0 4px;">${esc(title)}</h1>`;
+
+  if (analysis?.notes?.summary) {
+    html += `<p style="font-size:13px;color:#475569;line-height:1.6;margin:0 0 20px;">${esc(
+      analysis.notes.summary
+    )}</p>`;
+  }
+
+  if (analysis?.notes?.sections?.length) {
+    html += `<h2 style="font-size:16px;margin:20px 0 10px;border-bottom:1px solid #e2e8f0;padding-bottom:6px;">Notes</h2>`;
+    analysis.notes.sections.forEach((section) => {
+      html += `<h3 style="font-size:14px;margin:14px 0 6px;">${esc(section.heading)}</h3>`;
+      html += `<ul style="margin:0 0 8px;padding-left:20px;">`;
+      (section.points || []).forEach((point) => {
+        html += `<li style="font-size:12.5px;line-height:1.6;color:#334155;">${esc(point)}</li>`;
+      });
+      html += `</ul>`;
+    });
+  }
+
+  // Mermaid flowchart — render to SVG and inline it directly into the PDF content.
+  if (analysis?.mermaidFlowchart) {
+    try {
+      if (!mermaid.__pdfInit) {
+        mermaid.initialize({ startOnLoad: false, theme: "default", securityLevel: "strict" });
+        mermaid.__pdfInit = true;
+      }
+      const { svg } = await mermaid.render(`mermaid-pdf-${Date.now()}`, analysis.mermaidFlowchart);
+      html += `<h2 style="font-size:16px;margin:24px 0 10px;border-bottom:1px solid #e2e8f0;padding-bottom:6px;">Flowchart</h2>`;
+      html += `<div style="margin:10px 0;">${svg}</div>`;
+    } catch (err) {
+      console.error("Mermaid render failed for PDF:", err);
+    }
+  }
+
+  if (analysis?.keyTerms?.length) {
+    html += `<h2 style="font-size:16px;margin:24px 0 10px;border-bottom:1px solid #e2e8f0;padding-bottom:6px;">Key Terms</h2>`;
+    analysis.keyTerms.forEach((item) => {
+      html += `<p style="font-size:12.5px;line-height:1.6;margin:0 0 8px;"><strong>${esc(
+        item.term
+      )}</strong> — ${esc(item.definition)}</p>`;
+    });
+  }
+
+  if (analysis?.quiz?.length) {
+    html += `<h2 style="font-size:16px;margin:24px 0 10px;border-bottom:1px solid #e2e8f0;padding-bottom:6px;">Quiz</h2>`;
+    analysis.quiz.forEach((q, i) => {
+      html += `<p style="font-size:12.5px;font-weight:600;margin:14px 0 4px;">${i + 1}. ${esc(
+        q.question
+      )}</p>`;
+      html += `<ul style="margin:0 0 4px;padding-left:20px;">`;
+      (q.options || []).forEach((opt, j) => {
+        const isCorrect = j === q.correctIndex;
+        html += `<li style="font-size:12px;line-height:1.6;color:${
+          isCorrect ? "#0d9488" : "#334155"
+        };font-weight:${isCorrect ? "600" : "400"};">${esc(opt)}${
+          isCorrect ? " ✓" : ""
+        }</li>`;
+      });
+      html += `</ul>`;
+      if (q.explanation) {
+        html += `<p style="font-size:11.5px;color:#64748b;font-style:italic;margin:0 0 10px;">${esc(
+          q.explanation
+        )}</p>`;
+      }
+    });
+  }
+
+  container.innerHTML = html;
+  document.body.appendChild(container);
+
+  try {
+    const canvas = await html2canvas(container, { scale: 2, useCORS: true });
+    const imgData = canvas.toDataURL("image/png");
+
+    const pdf = new jsPDF({ unit: "px", format: "a4" });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = pageWidth;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    let heightLeft = imgHeight;
+    let position = 0;
+
+    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+
+    pdf.save(`${title.replace(/[^\w\- ]/g, "").trim() || "study-notes"}.pdf`);
+  } finally {
+    document.body.removeChild(container);
+  }
+};
 // same pattern as ComparisonResult.jsx, normalize both into a plain object.
 export const parseStudyResult = (raw) => {
   if (!raw) return null;
@@ -93,6 +213,18 @@ const TABS = [
 
 const StudyResult = ({ study, analysis }) => {
   const [tab, setTab] = useState("notes");
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+
+  const handlePdfDownload = async () => {
+    setGeneratingPdf(true);
+    try {
+      await downloadStudyPDF(study, analysis);
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
 
   if (!analysis) {
     return (
@@ -116,13 +248,27 @@ const StudyResult = ({ study, analysis }) => {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-['Space_Grotesk',sans-serif] line-clamp-2">
             {study?.videoTitle || "Untitled video"}
           </h1>
-          <button
-            onClick={() => downloadStudyNotes(study, analysis)}
-            className="flex items-center gap-1.5 shrink-0 text-sm font-medium text-teal-600 dark:text-teal-400 hover:text-teal-700 bg-teal-50 dark:bg-teal-900/30 hover:bg-teal-100 border border-teal-200 dark:border-teal-800 px-3 py-2 rounded-lg transition-colors"
-          >
-            <Download size={14} />
-            Download
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => downloadStudyNotes(study, analysis)}
+              className="flex items-center gap-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-teal-700 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-lg transition-colors"
+            >
+              <Download size={14} />
+              Markdown
+            </button>
+            <button
+              onClick={handlePdfDownload}
+              disabled={generatingPdf}
+              className="flex items-center gap-1.5 text-sm font-medium text-teal-600 dark:text-teal-400 hover:text-teal-700 bg-teal-50 dark:bg-teal-900/30 hover:bg-teal-100 border border-teal-200 dark:border-teal-800 px-3 py-2 rounded-lg transition-colors disabled:opacity-60"
+            >
+              {generatingPdf ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Download size={14} />
+              )}
+              {generatingPdf ? "Generating..." : "PDF"}
+            </button>
+          </div>
         </div>
         {analysis?.notes?.summary && (
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
