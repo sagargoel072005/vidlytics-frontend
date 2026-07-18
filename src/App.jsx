@@ -33,7 +33,6 @@ function App() {
           element={<Signup />}
         />
 
-        {/* Ab pehle auth check hoga, fir Layout render hoga */}
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
 
