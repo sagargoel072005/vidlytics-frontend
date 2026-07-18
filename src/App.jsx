@@ -14,6 +14,7 @@ import Profile from "./components/Profile";
 import Layout from "./components/Layout";
 import NewStudy from "./components/NewStudy";
 import StudyDetails from "./components/StudyDetails";
+import StudyHistory from "./components/StudyHistory";
 import "./index.css";
 
 function App() {
@@ -61,6 +62,10 @@ function App() {
             <Route
              path="/study/:id" 
              element={<StudyDetails />} />
+
+             <Route 
+             path="/study/history" 
+             element={<StudyHistory />} />
 
           </Route>
         </Route>

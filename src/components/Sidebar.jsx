@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/study", label: "Study Mode", icon: BookOpen },
   { to: "/history", label: "History", icon: HistoryIcon },
+  { to: "/study/history", label: "Study History", icon: BookOpen },
 ];
 
 const Sidebar = ({ isOpen, onClose }) => {

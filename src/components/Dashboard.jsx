@@ -35,14 +35,12 @@ const Dashboard = () => {
         withCredentials: true,
       });
       const comp = res.data.comparison;
-      console.log("RAW aiResult:", comp.aiResult);
-      console.log("typeof:", typeof comp.aiResult);
-
       setComparison(comp);
       setAnalysis(parseAIResult(comp.aiResult));
     } catch (err) {
       console.log(err);
-      setError("Comparison finished but result load nahi hua. History me check karo.");
+      setError("Comparison completed, but the result couldn't be loaded. Please check the History page.");
+
     }
   };
 
@@ -82,11 +80,11 @@ const Dashboard = () => {
                   if (data.comparisonId) {
                     fetchComparisonResult(data.comparisonId);
                   } else {
-                    setError("Backend ne comparisonId nahi bheja — SSE payload check karo.");
+                    setError("The comparison finished successfully, but the result is not available yet. Please check the History section.");
                   }
                 }
               } catch (e) {
-                // partial chunk aaya hoga, ignore karo
+                
               }
             });
         },
@@ -95,7 +93,7 @@ const Dashboard = () => {
         if (axios.isCancel(err) || err.code === "ERR_CANCELED") return;
         console.log(err);
         setComparing(false);
-        setError("Progress stream me dikkat aa gayi.");
+        setError("Connection to the progress stream was lost. Please try again.");
       });
   };
 
@@ -117,7 +115,7 @@ const Dashboard = () => {
     } catch (err) {
       console.log(err);
       setComparing(false);
-      setError("Comparison start nahi ho paya, dobara try karo.");
+     setError("Unable to start the comparison. Please try again.");
     }
   };
 
