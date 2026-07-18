@@ -6,6 +6,12 @@
 
 ---
 
+## Repositories
+
+* **Frontend:** https://github.com/sagargoel072005/vidlytics-frontend
+* **Backend:** https://github.com/sagargoel072005/vidlytics-backend
+
+
 ## What it does
 
 Vidlytics has two core features, built on the same transcript-extraction + AI-analysis pipeline:
