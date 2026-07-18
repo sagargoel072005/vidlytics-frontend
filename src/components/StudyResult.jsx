@@ -62,12 +62,25 @@ export const parseStudyResult = (raw) => {
   if (!raw) return null;
   if (typeof raw === "object") return raw;
 
+  const cleaned = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
+
   try {
-    const cleaned = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
     return JSON.parse(cleaned);
-  } catch (err) {
-    console.error("Failed to parse study aiResult:", err);
-    return null;
+  } catch {
+    // Fallback for responses with a conversational preamble before the
+    // actual JSON object (e.g. "Here's your study kit: {...}").
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start === -1 || end === -1 || end <= start) {
+      console.error("Failed to parse study aiResult: no JSON object found");
+      return null;
+    }
+    try {
+      return JSON.parse(cleaned.slice(start, end + 1));
+    } catch (err) {
+      console.error("Failed to parse study aiResult:", err);
+      return null;
+    }
   }
 };
 

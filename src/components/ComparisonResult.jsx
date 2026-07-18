@@ -11,15 +11,23 @@ export const parseAIResult = (raw) => {
   if (!raw) return null;
   if (typeof raw === "object") return raw;
 
+  const cleaned = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
+
   try {
-    const cleaned = raw
-      .replace(/```json/gi, "")
-      .replace(/```/g, "")
-      .trim();
     return JSON.parse(cleaned);
-  } catch (err) {
-    console.error("Failed to parse aiResult:", err);
-    return null;
+  } catch {
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start === -1 || end === -1 || end <= start) {
+      console.error("Failed to parse aiResult: no JSON object found");
+      return null;
+    }
+    try {
+      return JSON.parse(cleaned.slice(start, end + 1));
+    } catch (err) {
+      console.error("Failed to parse aiResult:", err);
+      return null;
+    }
   }
 };
 
