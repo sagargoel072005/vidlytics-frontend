@@ -57,11 +57,9 @@ const NewStudy = () => {
         }
       };
 
-      eventSource.onerror = () => {
-        eventSource.close();
-        setLoading(false);
-        setError("Lost connection while tracking progress. Please retry.");
-      };
+    eventSource.onerror = () => {
+    console.log("Study progress connection interrupted");
+};
     } catch (err) {
       console.log(err);
       setLoading(false);
