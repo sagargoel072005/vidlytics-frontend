@@ -74,12 +74,27 @@ mermaid.initialize({
   },
 });
 
+
 const cleanMermaid = (text = "") => {
-  return String(text)
+  let diagram = String(text)
     .replace(/```mermaid/gi, "")
     .replace(/```/g, "")
-    .replace(/^\s*mermaid\s*/i, "")
     .trim();
+
+  // Convert multiline node labels into valid quoted labels
+  diagram = diagram.replace(
+    /([A-Za-z0-9_]+)([\[{])([\s\S]*?)([\]}])/g,
+    (match, id, open, label, close) => {
+      const cleanLabel = label
+        .replace(/\s*\n\s*/g, " ")
+        .replace(/"/g, "'")
+        .trim();
+
+      return `${id}${open}"${cleanLabel}"${close}`;
+    }
+  );
+
+  return diagram;
 };
 
 const FlowchartView = ({ chart }) => {
