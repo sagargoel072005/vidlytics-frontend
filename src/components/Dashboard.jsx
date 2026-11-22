@@ -44,58 +44,145 @@ const Dashboard = () => {
     }
   };
 
-  const listenForProgress = (jobId) => {
-    streamedLenRef.current = 0;
-    const controller = new AbortController();
-    abortRef.current = controller;
+  // const listenForProgress = (jobId) => {
+  //   streamedLenRef.current = 0;
+  //   const controller = new AbortController();
+  //   abortRef.current = controller;
 
-    axios
-      .get(`${BASE_URL}/${jobId}/progress`, {
-        withCredentials: true,
-        responseType: "text",
-        signal: controller.signal,
+  //   axios
+  //     .get(`${BASE_URL}/${jobId}/progress`, {
+  //       withCredentials: true,
+  //       responseType: "text",
+  //       signal: controller.signal,
 
-        onDownloadProgress: (progressEvent) => {
-          const fullText =
-            progressEvent.event?.target?.responseText ??
-            progressEvent.currentTarget?.responseText ??
-            "";
+  //       onDownloadProgress: (progressEvent) => {
+  //         const fullText =
+  //           progressEvent.event?.target?.responseText ??
+  //           progressEvent.currentTarget?.responseText ??
+  //           "";
 
-          const newChunk = fullText.slice(streamedLenRef.current);
-          streamedLenRef.current = fullText.length;
+  //         const newChunk = fullText.slice(streamedLenRef.current);
+  //         streamedLenRef.current = fullText.length;
 
-          newChunk
-            .split("\n\n")
-            .map((line) => line.trim())
-            .filter((line) => line.startsWith("data:"))
-            .forEach((line) => {
-              try {
-                const data = JSON.parse(line.replace("data:", "").trim());
-                setProgress(data.progress);
-                setMessage(data.message);
+  //         newChunk
+  //           .split("\n\n")
+  //           .map((line) => line.trim())
+  //           .filter((line) => line.startsWith("data:"))
+  //           .forEach((line) => {
+  //             try {
+  //               const data = JSON.parse(line.replace("data:", "").trim());
+  //               setProgress(data.progress);
+  //               setMessage(data.message);
 
-                if (data.progress >= 100) {
-                  controller.abort();
-                  setComparing(false);
-                  if (data.comparisonId) {
-                    fetchComparisonResult(data.comparisonId);
-                  } else {
-                    setError("The comparison finished successfully, but the result is not available yet. Please check the History section.");
-                  }
-                }
-              } catch (e) {
+  //               if (data.progress >= 100) {
+  //                 controller.abort();
+  //                 setComparing(false);
+  //                 if (data.comparisonId) {
+  //                   fetchComparisonResult(data.comparisonId);
+  //                 } else {
+  //                   setError("The comparison finished successfully, but the result is not available yet. Please check the History section.");
+  //                 }
+  //               }
+  //             } catch (e) {
                 
-              }
-            });
+  //             }
+  //           });
+  //       },
+  //     })
+  //     .catch((err) => {
+  //       if (axios.isCancel(err) || err.code === "ERR_CANCELED") return;
+  //       console.log(err);
+  //       setComparing(false);
+  //       setError("Connection to the progress stream was lost. Please try again.");
+  //     });
+  // };
+
+
+  
+const listenForProgress = async (jobId) => {
+  const controller = new AbortController();
+  abortRef.current = controller;
+
+  try {
+    const response = await fetch(
+      `${BASE_URL}/${jobId}/progress`,
+      {
+        credentials: "include",
+        signal: controller.signal,
+        headers: {
+          Accept: "text/event-stream",
         },
-      })
-      .catch((err) => {
-        if (axios.isCancel(err) || err.code === "ERR_CANCELED") return;
-        console.log(err);
-        setComparing(false);
-        setError("Connection to the progress stream was lost. Please try again.");
-      });
-  };
+      }
+    );
+
+    if (!response.ok || !response.body) {
+      throw new Error(`SSE failed: ${response.status}`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    let buffer = "";
+
+    while (true) {
+      const { value, done } = await reader.read();
+
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      const events = buffer.replace(/\r\n/g, "\n").split("\n\n");
+
+      buffer = events.pop() || "";
+
+      for (const event of events) {
+        const line = event
+          .split("\n")
+          .find((line) => line.startsWith("data:"));
+
+        if (!line) continue;
+
+        const data = JSON.parse(line.slice(5).trim());
+
+        setProgress(data.progress);
+        setMessage(data.message);
+
+        if (data.error) {
+          controller.abort();
+          setComparing(false);
+          setError(data.message || "Comparison failed");
+          return;
+        }
+
+        if (data.progress >= 100) {
+          controller.abort();
+          setComparing(false);
+
+          if (data.comparisonId) {
+            await fetchComparisonResult(data.comparisonId);
+          } else {
+            setError("Comparison result ID was not received.");
+          }
+
+          return;
+        }
+      }
+    }
+
+    if (!controller.signal.aborted) {
+      throw new Error("Progress stream ended unexpectedly");
+    }
+  } catch (err) {
+    if (controller.signal.aborted) return;
+
+    console.error("Progress stream error:", err);
+
+    setComparing(false);
+    setError("Connection to the progress stream was lost. Please try again.");
+  }
+};
+
+  
 
   const compareVideos = async () => {
     setError("");
